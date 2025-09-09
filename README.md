@@ -36,18 +36,16 @@
 
 ## ディレクトリ構成
 
-```
-.
-├── .mvn/           # Maven Wrapper
-├── src
-│   ├── main/java     # アプリケーションのソースコード
-│   └── test/java     # テストコード
-├── .gitignore
-├── mvnw              # macOS/Linux用Maven Wrapperスクリプト
-├── mvnw.cmd          # Windows用Maven Wrapperスクリプト
-├── pom.xml           # Mavenプロジェクト設定ファイル
-└── 要件定義書.md
-```
+| パス          | 説明                                    |
+| ------------- | --------------------------------------- |
+| .mvn/         | Maven Wrapper                           |
+| src/main/java | アプリケーションのソースコード          |
+| src/test/java | テストコード                            |
+| .gitignore    | Git 管理対象外ファイル設定              |
+| mvnw          | macOS/Linux 用 Maven Wrapper スクリプト |
+| mvnw.cmd      | Windows 用 Maven Wrapper スクリプト     |
+| pom.xml       | Maven プロジェクト設定ファイル          |
+| Docs          | ドキュメント関係                        |
 
 ## 起動方法
 
