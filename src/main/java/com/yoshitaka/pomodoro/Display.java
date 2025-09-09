@@ -13,6 +13,16 @@ public class Display {
     }
 
     /**
+     * 現在のセット数を表示します
+     *
+     * @param currentSet 現在のセット数
+     * @param totalSets  合計セット数
+     */
+    public void showSetCount(int currentSet, int totalSets) {
+        System.out.printf("%n--- セット %d / %d ---%n", currentSet, totalSets);
+    }
+
+    /**
      * 指定されたフェーズの開始メッセージを表示します
      *
      * @param phaseName       フェーズ名（例: "作業"）
