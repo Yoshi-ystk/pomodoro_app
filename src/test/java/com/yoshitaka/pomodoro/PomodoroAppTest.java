@@ -1,13 +1,14 @@
 package com.yoshitaka.pomodoro;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 import static org.mockito.Mockito.*;
 
@@ -20,81 +21,71 @@ class PomodoroAppTest {
     @Mock
     private TimerService mockTimerService;
 
-    private int workMinutes;
-    private int breakMinutes;
+    private PomodoroApp app;
 
     @BeforeEach
     void setUp() throws Exception {
-        // PomodoroAppのprivate final定数をリフレクションで取得
-        workMinutes = getStaticFinalField(PomodoroApp.class, "WORK_MINUTES");
-        breakMinutes = getStaticFinalField(PomodoroApp.class, "BREAK_MINUTES");
+        app = new PomodoroApp();
+
+        // リフレクションを使ってモックを注入
+        setField(app, "display", mockDisplay);
+        setField(app, "timerService", mockTimerService);
     }
 
     @Test
-    void testRunCycles_withFourSets() {
-        final int totalSets = 4;
+    @DisplayName("startコマンド（PAUSED時）でタイマーが再開されること")
+    void testHandleCommand_start_from_paused() throws Exception {
+        when(mockTimerService.getState()).thenReturn(TimerService.State.PAUSED);
+        setField(app, "timerIsActive", true);
 
-        // テスト対象のロジックを実行
-        PomodoroApp.runCycles(mockDisplay, mockTimerService, totalSets);
+        callHandleCommand("start");
 
-        // メソッドが呼ばれた順序を記録
-        InOrder inOrder = inOrder(mockDisplay, mockTimerService);
-
-        // 開始メッセージが呼ばれたか
-        inOrder.verify(mockDisplay).showWelcomeMessage();
-
-        // ループ処理が期待通りか
-        for (int set = 1; set <= totalSets; set++) {
-            inOrder.verify(mockDisplay).showSetCount(set, totalSets);
-            inOrder.verify(mockTimerService).runTimer("作業", workMinutes);
-
-            if (set < totalSets) {
-                inOrder.verify(mockTimerService).runTimer("休憩", breakMinutes);
-            }
-        }
-
-        // 完了メッセージが呼ばれたか
-        inOrder.verify(mockDisplay).showCompletionMessage();
-        verifyNoMoreInteractions(mockDisplay, mockTimerService);
+        verify(mockTimerService).start();
     }
 
     @Test
-    void testRunCycles_withOneSet() {
-        final int totalSets = 1;
+    @DisplayName("stopコマンドでタイマーが一時停止されること")
+    void testHandleCommand_stop() throws Exception {
+        when(mockTimerService.getState()).thenReturn(TimerService.State.RUNNING);
+        setField(app, "timerIsActive", true);
 
-        PomodoroApp.runCycles(mockDisplay, mockTimerService, totalSets);
+        callHandleCommand("stop");
 
-        InOrder inOrder = inOrder(mockDisplay, mockTimerService);
-
-        inOrder.verify(mockDisplay).showWelcomeMessage();
-        inOrder.verify(mockDisplay).showSetCount(1, 1);
-        inOrder.verify(mockTimerService).runTimer("作業", workMinutes);
-        inOrder.verify(mockDisplay).showCompletionMessage();
-
-        verify(mockTimerService, never()).runTimer(eq("休憩"), anyInt());
-        verifyNoMoreInteractions(mockDisplay, mockTimerService);
+        verify(mockTimerService).pause();
     }
 
     @Test
-    void testRunCycles_withZeroSets() {
-        final int totalSets = 0;
+    @DisplayName("resetコマンドでリセットメッセージが表示されること")
+    void testHandleCommand_reset() throws Exception {
+        setField(app, "timerIsActive", true);
 
-        PomodoroApp.runCycles(mockDisplay, mockTimerService, totalSets);
+        callHandleCommand("reset");
 
-        InOrder inOrder = inOrder(mockDisplay, mockTimerService);
-
-        inOrder.verify(mockDisplay).showWelcomeMessage();
-        inOrder.verify(mockDisplay).showCompletionMessage();
-
-        verify(mockDisplay, never()).showSetCount(anyInt(), anyInt());
-        verify(mockTimerService, never()).runTimer(anyString(), anyInt());
-        verifyNoMoreInteractions(mockDisplay, mockTimerService);
+        verify(mockDisplay).showResetMessage();
+        verify(mockDisplay).showMainMenu();
     }
 
-    // リフレクションを使ってprivate static finalなフィールドの値を取得するヘルパーメソッド
-    private static int getStaticFinalField(Class<?> clazz, String fieldName) throws Exception {
-        Field field = clazz.getDeclaredField(fieldName);
+    @Test
+    @DisplayName("無効なコマンドでエラーメッセージが表示されること")
+    void testHandleCommand_invalid() throws Exception {
+        setField(app, "timerIsActive", true);
+
+        callHandleCommand("invalid_command");
+
+        verify(mockDisplay).showInvalidCommand("invalid_command");
+    }
+
+    // privateメソッドをリフレクションで呼び出すヘルパー
+    private void callHandleCommand(String command) throws Exception {
+        Method method = PomodoroApp.class.getDeclaredMethod("handleCommand", String.class);
+        method.setAccessible(true);
+        method.invoke(app, command);
+    }
+
+    // privateフィールドに値を設定するヘルパー
+    private void setField(Object target, String fieldName, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
-        return (int) field.get(null);
+        field.set(target, value);
     }
 }

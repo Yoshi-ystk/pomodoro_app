@@ -8,11 +8,11 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Displayクラスのテスト
- * 標準出力をキャプチャして検証します
+ * 標準出力をキャプチャして検証
  */
 class DisplayTest {
 
@@ -36,27 +36,73 @@ class DisplayTest {
     }
 
     @Test
-    @DisplayName("Welcomeメッセージが正しく表示されること")
-    void testShowWelcomeMessage() {
-        display.showWelcomeMessage();
-        // OSの改行コードに依存しないように\nを使う
-        assertEquals("ポモドーロタイマーを開始します。" + System.lineSeparator(), outContent.toString());
+    @DisplayName("メインメニューが正しく表示されること")
+    void testShowMainMenu() {
+        display.showMainMenu();
+        String output = outContent.toString();
+        assertTrue(output.contains("ポモドーロアプリを起動しました。"));
+        assertTrue(output.contains("メニューを入力してください。"));
+        assertTrue(output.contains("開始: start / 終了: end"));
     }
 
     @Test
-    @DisplayName("フェーズ開始メッセージが正しく表示されること")
-    void testShowPhaseStart() {
-        display.showPhaseStart("テスト", 10);
-        String expected = String.format("%nテストを開始します。（10分）%n");
-        assertEquals(expected, outContent.toString());
+    @DisplayName("タイマーの初期画面が正しく描画されること")
+    void testDrawInitialTimerScreen() {
+        display.drawInitialTimerScreen();
+        String output = outContent.toString();
+        // 画面クリアとカーソル非表示のコードが含まれているか
+        assertTrue(output.contains("\033[H\033[2J"));
+        assertTrue(output.contains("\033[?25l"));
+        // プロンプトが表示されているか
+        assertTrue(output.contains("> "));
     }
 
     @Test
-    @DisplayName("タイマー表示が正しく更新されること")
-    void testUpdateTimer() {
-        display.updateTimer("12:34", "[###---]", 50);
-        // \rとANSIエスケープシーケンスを含む出力を検証
-        String expected = "\r\u001b[2K残り 12:34 [###---] 50%";
-        assertEquals(expected, outContent.toString());
+    @DisplayName("タイマー実行中の画面が正しく更新されること")
+    void testUpdateTimerScreen_Running() {
+        display.updateTimerScreen(1499, 1500, TimerService.State.RUNNING);
+        String output = outContent.toString();
+        // キャリッジリターン（\r）が含まれていることを確認（改行は含まれない）
+        assertTrue(output.contains("\r作業を開始します。（25分）"));
+        assertTrue(output.contains("\r残り 24:59"));
+        assertTrue(output.contains("\r停止: stop / リセット: reset / 終了: end"));
+    }
+
+    @Test
+    @DisplayName("タイマー一時停止中の画面が正しく更新されること")
+    void testUpdateTimerScreen_Paused() {
+        display.updateTimerScreen(900, 1500, TimerService.State.PAUSED);
+        String output = outContent.toString();
+        // キャリッジリターン（\r）が含まれていることを確認（改行は含まれない）
+        assertTrue(output.contains("\r作業を停止しました。（25分）"));
+        assertTrue(output.contains("\r残り 15:00"));
+        assertTrue(output.contains("\r開始: start / リセット: reset / 終了: end"));
+    }
+
+    @Test
+    @DisplayName("完了メッセージが正しく表示されること")
+    void testShowCompletionMessage() {
+        display.showCompletionMessage();
+        String output = outContent.toString();
+        // キャリッジリターン（\r）が含まれていることを確認
+        assertTrue(output.contains("\rポモドーロが完了しました!"));
+    }
+
+    @Test
+    @DisplayName("リセットメッセージが正しく表示されること")
+    void testShowResetMessage() {
+        display.showResetMessage();
+        String output = outContent.toString();
+        // キャリッジリターン（\r）が含まれていることを確認
+        assertTrue(output.contains("\rリセットしました。"));
+    }
+
+    @Test
+    @DisplayName("無効なコマンドメッセージが正しく表示されること")
+    void testShowInvalidCommand() {
+        display.showInvalidCommand("invalid");
+        String output = outContent.toString();
+        // キャリッジリターン（\r）が含まれていることを確認
+        assertTrue(output.contains("\r'invalid' は無効なコマンドです。"));
     }
 }

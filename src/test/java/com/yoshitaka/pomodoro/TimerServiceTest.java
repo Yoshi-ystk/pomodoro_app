@@ -2,54 +2,87 @@ package com.yoshitaka.pomodoro;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.*;
 
 /**
  * TimerServiceクラスのテスト
  */
+@ExtendWith(MockitoExtension.class)
 class TimerServiceTest {
 
-    /**
-     * Displayクラスのメソッド呼び出しを記録するためのスパイ（テストダブル）
-     */
-    static class DisplaySpy extends Display {
-        boolean showPhaseStartCalled = false;
-        boolean updateTimerCalled = false;
-        boolean showPhaseEndCalled = false;
-        String lastPhaseName = "";
+    @Mock
+    private TimerListener listenerMock;
 
-        @Override
-        public void showPhaseStart(String phaseName, int durationMinutes) {
-            this.showPhaseStartCalled = true;
-            this.lastPhaseName = phaseName;
-        }
+    @Test
+    @DisplayName("タイマーが開始されるとonTickが呼ばれること")
+    void testTimerRun_ticks() throws InterruptedException {
+        TimerService timerService = new TimerService(1, listenerMock); // 1-minute timer
 
-        @Override
-        public void updateTimer(String timeString, String progressBarString, int percentage) {
-            this.updateTimerCalled = true;
-        }
+        Thread thread = new Thread(timerService);
+        thread.start();
 
-        @Override
-        public void showPhaseEnd(String phaseName) {
-            this.showPhaseEndCalled = true;
-        }
+        // onStateChangeが呼ばれてRUNNING状態になるのを待つ
+        verify(listenerMock, timeout(100).atLeastOnce()).onStateChange();
+        assertEquals(TimerService.State.RUNNING, timerService.getState());
+
+        // onTickが少なくとも1回呼ばれるのを待つ (1秒待つ)
+        verify(listenerMock, timeout(1100).atLeastOnce()).onTick(anyLong(), anyLong());
+
+        // スレッドを中断してテストを終了
+        thread.interrupt();
+        thread.join();
+
+        // onFinishが呼ばれていないことを確認
+        verify(listenerMock, never()).onFinish();
     }
 
     @Test
-    @DisplayName("runTimerが0分の時、開始と終了メソッドが呼ばれること")
-    void testRunTimer_ZeroDuration() throws InterruptedException {
-        DisplaySpy displaySpy = new DisplaySpy();
-        TimerService timerService = new TimerService(displaySpy);
+    @DisplayName("タイマーが0分の時、onFinishのみが呼ばれること")
+    void testTimerRun_ZeroDuration() throws InterruptedException {
+        TimerService timerService = new TimerService(0, listenerMock);
 
-        // 0分のタイマーを実行
-        timerService.runTimer("テストフェーズ", 0);
+        Thread thread = new Thread(timerService);
+        thread.start();
+        thread.join(); // すぐに終了するはず
 
-        // 各メソッドが1回は呼ばれたことを確認
-        assertTrue(displaySpy.showPhaseStartCalled, "showPhaseStartが呼ばれていません");
-        assertTrue(displaySpy.updateTimerCalled, "updateTimerが呼ばれていません");
-        assertTrue(displaySpy.showPhaseEndCalled, "showPhaseEndが呼ばれていません");
-        assertEquals("テストフェーズ", displaySpy.lastPhaseName, "フェーズ名が正しく渡されていません");
+        // onTickは一度も呼ばれない
+        verify(listenerMock, never()).onTick(anyLong(), anyLong());
+        // onFinishが1回呼ばれる
+        verify(listenerMock, times(1)).onFinish();
+    }
+
+    @Test
+    @DisplayName("pauseとstartで状態が変化し、リスナーが呼ばれること")
+    void testPauseAndStart() throws InterruptedException {
+        TimerService timerService = new TimerService(1, listenerMock);
+
+        // 初期状態はIDLE
+        assertEquals(TimerService.State.IDLE, timerService.getState());
+
+        Thread thread = new Thread(timerService);
+        thread.start();
+
+        // onStateChangeが呼ばれてRUNNING状態になるのを待つ
+        verify(listenerMock, timeout(100).atLeastOnce()).onStateChange();
+        assertEquals(TimerService.State.RUNNING, timerService.getState());
+
+        timerService.pause();
+        assertEquals(TimerService.State.PAUSED, timerService.getState());
+
+        timerService.start();
+        assertEquals(TimerService.State.RUNNING, timerService.getState());
+
+        // 状態変化のたびにonStateChangeが呼ばれることを確認
+        // start(IDLE->RUNNING), pause(RUNNING->PAUSED), start(PAUSED->RUNNING) の3回
+        verify(listenerMock, timeout(100).times(3)).onStateChange();
+
+        // スレッドを停止
+        thread.interrupt();
+        thread.join();
     }
 }

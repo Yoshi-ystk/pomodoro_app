@@ -118,6 +118,30 @@
                     <mainClass>com.yoshitaka.pomodoro.PomodoroApp</mainClass>
                 </configuration>
             </plugin>
+
+            <!-- 実行可能JAR作成用プラグイン -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer
+                                    implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.yoshitaka.pomodoro.PomodoroApp</mainClass>
+                                </transformer>
+                            </transformers>
+                            <finalName>pomodoro-app</finalName>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>
