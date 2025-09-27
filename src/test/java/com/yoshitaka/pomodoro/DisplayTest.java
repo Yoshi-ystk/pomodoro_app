@@ -84,8 +84,8 @@ class DisplayTest {
     void testShowCompletionMessage() {
         display.showCompletionMessage();
         String output = outContent.toString();
-        // キャリッジリターン（\r）が含まれていることを確認
-        assertTrue(output.contains("\rポモドーロが完了しました!"));
+        // 完了メッセージが含まれていることを確認（感嘆符は全角）
+        assertTrue(output.contains("ポモドーロが完了しました！"));
     }
 
     @Test

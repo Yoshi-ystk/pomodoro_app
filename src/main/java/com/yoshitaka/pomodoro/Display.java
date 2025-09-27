@@ -72,6 +72,10 @@ public class Display {
         System.out.print(SHOW_CURSOR + "> "); // カーソルを再表示してプロンプトを出力
         System.out.flush(); // 出力バッファを強制的にフラッシュ
         currentPhaseMessage = "作業を開始します。（25分）"; // 初期状態を設定（重複表示を防ぐため）
+
+        // 作業開始音を再生
+        System.out.println("[DEBUG] Display.drawInitialTimerScreen: 作業開始音を再生します");
+        SoundPlayer.playWorkStartSound();
     }
 
     /*
@@ -175,6 +179,8 @@ public class Display {
      */
     public void showCompletionMessage() {
         showMessage("ポモドーロが完了しました！", 2); // 2秒間表示してから消去
+        // 作業完了音を再生
+        SoundPlayer.playWorkCompleteSound();
     }
 
     /*
